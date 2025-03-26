@@ -3,18 +3,15 @@ using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using static MaterialDesignThemes.Wpf.Theme;
+
+using NodeItem = WpfTreeViewDemo.TopologyView.NodeItem;
 
 namespace WpfTreeViewDemo
 {
@@ -29,19 +26,24 @@ namespace WpfTreeViewDemo
 			InitializeComponent();
 			WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
-			var root = new TreeItem("Menu");
-			var child1 = new TreeItem("Child #1", root);
-			child1.Items.Add(new TreeItem("Child #1.1", child1));
-			child1.Items.Add(new TreeItem("Child #1.2", child1));
+			var root = new NodeItem("Menu");
+			var child1 = new NodeItem("Child #1", root);
+			child1.Items.Add(new NodeItem("Child #1.1", child1));
+			child1.Items.Add(new NodeItem("Child #1.2", child1));
 			root.Items.Add(child1);
-			root.Items.Add(new TreeItem("Child #2", root));
-			var child3 = new TreeItem("Child #3", root);
-			child3.Items.Add(new TreeItem("Child #3.1", child3));
+			root.Items.Add(new NodeItem("Child #2", root));
+			var child3 = new NodeItem("Child #3", root);
+			child3.Items.Add(new NodeItem("Child #3.1", child3));
 			root.Items.Add(child3);
 			treeCtrl.Items.Add(root);
+			topology.Items.Add(root);
 
 			AddItemCmd = new RelayCommand(AddItemCmdExe, CanAddItemCmdExe);
 			RemoveItemCmd = new RelayCommand(RemoveItemCmdExe, CanRemoveItemCmdExe);
+
+			var theme = _paletteHelper.GetTheme();
+			topology.Background = topologyBorder.Background;
+			topology.DataContext = this;
 		}
 
 		protected override void OnSourceInitialized(EventArgs e)
@@ -65,19 +67,17 @@ namespace WpfTreeViewDemo
 			});
 		}
 
-		public class TreeItem(string title, MainWindow.TreeItem? parent = null)
+		private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
 		{
-			public string Title { get; set; } = title;
-			public TreeItem? Parent { get; set; } = parent;
-
-			public ObservableCollection<TreeItem> Items { get; set; } = [];
+			topology.Width = topologyBorder.ActualWidth;
+			topology.Height = topologyBorder.ActualHeight;
 		}
 
 		public RelayCommand AddItemCmd { get; set; }
 
 		private void AddItemCmdExe(object param)
 		{
-			var item = param as TreeItem;
+			var item = param as NodeItem;
 			if (item?.Parent != null) {
 				Debug.WriteLine($"AddItem: {item?.Title}, {item?.Parent.Title}");
 			} else {
@@ -94,7 +94,7 @@ namespace WpfTreeViewDemo
 
 		private void RemoveItemCmdExe(object param)
 		{
-			var item = param as TreeItem;
+			var item = param as NodeItem;
 			if (item?.Parent != null) {
 				Debug.WriteLine($"RemoveItem: {item?.Title}, {item?.Parent.Title}");
 			} else {
@@ -147,35 +147,31 @@ namespace WpfTreeViewDemo
 		}
 	}
 
+	// https://itpro.tistory.com/90
 	// https://www.codeproject.com/Tips/813345/Basic-MVVM-and-ICommand-Usage-Example
 	public class RelayCommand : ICommand
 	{
-		private Action<object> execute;
+		private Action<object>? execute;
 
-		private Predicate<object> canExecute;
+		private Predicate<object>? canExecute;
 
-		private event EventHandler CanExecuteChangedInternal;
+		private event EventHandler? CanExecuteChangedInternal;
 
 		public RelayCommand(Action<object> execute)
 			: this(execute, DefaultCanExecute)
 		{
 		}
 
-		public RelayCommand(Action<object> execute, Predicate<object> canExecute)
+		public RelayCommand(Action<object>? execute, Predicate<object>? canExecute)
 		{
-			if (execute == null) {
-				throw new ArgumentNullException("execute");
-			}
-
-			if (canExecute == null) {
-				throw new ArgumentNullException("canExecute");
-			}
+			ArgumentNullException.ThrowIfNull(execute);
+			ArgumentNullException.ThrowIfNull(canExecute);
 
 			this.execute = execute;
 			this.canExecute = canExecute;
 		}
 
-		public event EventHandler CanExecuteChanged
+		public event EventHandler? CanExecuteChanged
 		{
 			add
 			{
@@ -190,23 +186,20 @@ namespace WpfTreeViewDemo
 			}
 		}
 
-		public bool CanExecute(object parameter)
+		public bool CanExecute(object? parameter)
 		{
-			return this.canExecute != null && this.canExecute(parameter);
+			return this.canExecute != null && parameter != null && this.canExecute(parameter);
 		}
 
-		public void Execute(object parameter)
+		public void Execute(object? parameter)
 		{
-			this.execute(parameter);
+			if (parameter != null && this.execute != null)
+				this.execute(parameter);
 		}
 
 		public void OnCanExecuteChanged()
 		{
-			EventHandler handler = this.CanExecuteChangedInternal;
-			if (handler != null) {
-				//DispatcherHelper.BeginInvokeOnUIThread(() => handler.Invoke(this, EventArgs.Empty));
-				handler.Invoke(this, EventArgs.Empty);
-			}
+			this.CanExecuteChangedInternal?.Invoke(this, EventArgs.Empty);
 		}
 
 		public void Destroy()
