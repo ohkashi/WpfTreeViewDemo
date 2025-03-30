@@ -3,7 +3,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
+using System.Numerics;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -13,9 +17,11 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Media.Media3D;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using static WpfTreeViewDemo.TopologyView;
+using System.Windows.Threading;
+
 
 namespace WpfTreeViewDemo
 {
@@ -27,6 +33,96 @@ namespace WpfTreeViewDemo
 		public TopologyView()
 		{
 			InitializeComponent();
+
+			gameTime = DateTime.Now;
+			dispatcherTimer = new System.Windows.Threading.DispatcherTimer();
+			dispatcherTimer.Tick += new EventHandler(DispatcherTimer_Tick);
+			dispatcherTimer.Interval = TimeSpan.FromMilliseconds(10);
+			dispatcherTimer.Start();
+		}
+
+		public void Dispose()
+		{
+			dispatcherTimer.Stop();
+		}
+
+		public void InitNode(float w, float h)
+		{
+			var count = Items.Count;
+			if (count > 0) {
+				var pos = new Vector2(w - 100, h / 2);
+				Items[0]!.Init(pos, 90.0f, 0);
+			}
+		}
+
+		private readonly DispatcherTimer dispatcherTimer;
+		private DateTime gameTime;
+
+		private void RenderImpl(DrawingContext dc, float w, float h, float delta)
+		{
+			var aspect = w / h;
+			var x = w / 2.0f;
+			var y = h / 2.0f;
+			foreach (NodeItem node in Items) {
+				node.Update(w, h, delta);
+				node.Draw(dc, w, h, delta);
+			}
+
+#if DEBUG
+			string testString = $"delta: {delta}";
+
+			FormattedText formattedText = new(
+				testString,
+				CultureInfo.GetCultureInfo("en-us"),
+				FlowDirection.LeftToRight,
+				new Typeface("Verdana"),
+				15,
+				Brushes.White,
+				VisualTreeHelper.GetDpi(this).PixelsPerDip)
+			{
+				MaxTextWidth = w,
+				MaxTextHeight = h
+			};
+
+			dc.DrawText(formattedText, new Point(10, h - 20));
+#endif
+		}
+
+		private void DispatcherTimer_Tick(object? sender, EventArgs e)
+		{
+			var delta = (float)(DateTime.Now - gameTime).TotalMilliseconds;
+			var width = (float)ActualWidth;
+			var height = (float)ActualHeight;
+			if (width > 0 && height > 0) {
+				this.Render(width, height, delta);
+			}
+			gameTime = DateTime.Now;
+		}
+
+		protected override void OnRender(DrawingContext dc)
+		{
+			base.OnRender(dc);
+			var delta = (float)(DateTime.Now - gameTime).TotalMilliseconds;
+			var width = (float)ActualWidth;
+			var height = (float)ActualHeight;
+			if (width > 0 && height > 0)
+				Render(width, height, delta);
+			dc.DrawDrawing(backingStore);
+			gameTime = DateTime.Now;
+		}
+
+		private bool node_inited = false;
+		private readonly DrawingGroup backingStore = new();
+
+		private void Render(float width, float height, float delta)
+		{
+			if (!node_inited) {
+				InitNode(width, height);
+				node_inited = true;
+			}
+			var dc = backingStore.Open();
+			RenderImpl(dc, width, height, delta);
+			dc.Close();
 		}
 
 		public class NodeItem(string title, TopologyView.NodeItem? parent = null)
@@ -34,7 +130,52 @@ namespace WpfTreeViewDemo
 			public string Title { get; set; } = title;
 			public NodeItem? Parent { get; set; } = parent;
 
+			public Vector2 Position { get; set; }
+			public float Angle { get; set; } = 90.0f;
+
 			public ObservableCollection<NodeItem> Items { get; set; } = [];
+
+			public void Init(Vector2 pos, float angle, int depth)
+			{
+				Position = pos;
+				Angle = angle;
+				if (Items.Count > 0) {
+					depth++;
+					var count = Items.Count;
+					float distance = 100.0f;
+					float step = 60.0f / Math.Max(1, count - 1);
+					angle = angle - ((count - 1) / 2.0f * step);
+					foreach (NodeItem child in Items) {
+						double degree = Math.PI * (angle + 180.0f) / 180.0;
+						pos.X = (float)(Position.X + Math.Sin(degree) * distance);
+						pos.Y = (float)(Position.Y + Math.Cos(degree) * distance);
+						child.Init(pos, angle, depth);
+						angle += step;
+					}
+				}
+			}
+
+			public void Draw(DrawingContext dc, float w, float h, float delta)
+			{
+				var pen = new Pen(Brushes.White, 1);
+				var pos = new Point(Position.X, Position.Y);
+				float radius = 10.0f;
+				double degree = Math.PI * Angle / 180.0;
+				if (Parent != null) {
+					var dot_pen = new Pen(Brushes.Gray, 1);
+					dot_pen.DashStyle = System.Windows.Media.DashStyles.Dot;
+					dc.DrawLine(dot_pen, pos, new Point(Parent.Position.X, Parent.Position.Y));
+				}
+				dc.DrawEllipse(Brushes.DarkBlue, pen, pos, radius, radius);
+				dc.DrawLine(pen, pos, new Point(Position.X + Math.Sin(degree) * radius, Position.Y + Math.Cos(degree) * radius));
+				foreach (NodeItem child in this.Items) {
+					child.Draw(dc, w, h, delta);
+				}
+			}
+
+			public void Update(float w, float h, float delta)
+			{
+			}
 		}
 
 		public class NodeItemCollection : CollectionBase

@@ -33,7 +33,9 @@ namespace WpfTreeViewDemo
 			root.Items.Add(child1);
 			root.Items.Add(new NodeItem("Child #2", root));
 			var child3 = new NodeItem("Child #3", root);
-			child3.Items.Add(new NodeItem("Child #3.1", child3));
+			var child3_1 = new NodeItem("Child #3.1", child3);
+			child3_1.Items.Add(new NodeItem("Child #3.1.1", child3_1));
+			child3.Items.Add(child3_1);
 			root.Items.Add(child3);
 			treeCtrl.Items.Add(root);
 			topology.Items.Add(root);
@@ -41,8 +43,6 @@ namespace WpfTreeViewDemo
 			AddItemCmd = new RelayCommand(AddItemCmdExe, CanAddItemCmdExe);
 			RemoveItemCmd = new RelayCommand(RemoveItemCmdExe, CanRemoveItemCmdExe);
 
-			var theme = _paletteHelper.GetTheme();
-			topology.Background = topologyBorder.Background;
 			topology.DataContext = this;
 		}
 
