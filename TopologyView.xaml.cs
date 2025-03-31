@@ -35,28 +35,48 @@ namespace WpfTreeViewDemo
 			InitializeComponent();
 
 			gameTime = DateTime.Now;
-			dispatcherTimer = new System.Windows.Threading.DispatcherTimer();
-			dispatcherTimer.Tick += new EventHandler(DispatcherTimer_Tick);
-			dispatcherTimer.Interval = TimeSpan.FromMilliseconds(10);
-			dispatcherTimer.Start();
+			if (DesignerProperties.GetIsInDesignMode(this)) {
+				Width = 320;
+				Height = 240;
+			} else {
+				dispatcherTimer = new System.Windows.Threading.DispatcherTimer();
+				dispatcherTimer.Tick += new EventHandler(DispatcherTimer_Tick);
+				dispatcherTimer.Interval = TimeSpan.FromMilliseconds(10);
+				dispatcherTimer.Start();
+			}
 		}
 
 		public void Dispose()
 		{
-			dispatcherTimer.Stop();
+			dispatcherTimer?.Stop();
 		}
 
 		public void InitNode(float w, float h)
 		{
 			var count = Items.Count;
 			if (count > 0) {
-				var pos = new Vector2(w - 100, h / 2);
-				Items[0]!.Init(pos, 90.0f, 0);
+				var pos = new Vector2(w - (float)this.Padding.Right, h / 2);
+				Items[0]!.Init(pos, 90.0f, 0, this);
 			}
 		}
 
-		private readonly DispatcherTimer dispatcherTimer;
+		private readonly DispatcherTimer? dispatcherTimer;
 		private DateTime gameTime;
+
+		private SolidColorBrush? nodeFillBrush;
+
+		[Category("NodeFillBrush"), Description("Brush to paint on nodes")]
+		public SolidColorBrush NodeFillBrush
+		{
+			get
+			{
+				return nodeFillBrush ??= new SolidColorBrush(Colors.DarkBlue);
+			}
+			set
+			{
+				nodeFillBrush = value;
+			}
+		}
 
 		private void RenderImpl(DrawingContext dc, float w, float h, float delta)
 		{
@@ -111,7 +131,13 @@ namespace WpfTreeViewDemo
 			gameTime = DateTime.Now;
 		}
 
+		private void OnSizeChanged(float width, float height)
+		{
+			Debug.WriteLine($"OnSizeChanged({width}, {height})");
+		}
+
 		private bool node_inited = false;
+		private Vector2 client_size = new();
 		private readonly DrawingGroup backingStore = new();
 
 		private void Render(float width, float height, float delta)
@@ -120,6 +146,12 @@ namespace WpfTreeViewDemo
 				InitNode(width, height);
 				node_inited = true;
 			}
+			if (width != client_size.X || height != client_size.Y) {
+				client_size.X = width;
+				client_size.Y = height;
+				this.OnSizeChanged(width, height);
+			}
+
 			var dc = backingStore.Open();
 			RenderImpl(dc, width, height, delta);
 			dc.Close();
@@ -135,21 +167,24 @@ namespace WpfTreeViewDemo
 
 			public ObservableCollection<NodeItem> Items { get; set; } = [];
 
-			public void Init(Vector2 pos, float angle, int depth)
+			private TopologyView? ownerView;
+
+			public void Init(Vector2 pos, float angle, int depth, TopologyView? view = null)
 			{
+				ownerView = view;
 				Position = pos;
 				Angle = angle;
 				if (Items.Count > 0) {
 					depth++;
 					var count = Items.Count;
 					float distance = 100.0f;
-					float step = 60.0f / Math.Max(1, count - 1);
-					angle = angle - ((count - 1) / 2.0f * step);
+					float step = 20.0f;
+					angle -= (count - 1) / 2.0f * step;
 					foreach (NodeItem child in Items) {
 						double degree = Math.PI * (angle + 180.0f) / 180.0;
 						pos.X = (float)(Position.X + Math.Sin(degree) * distance);
 						pos.Y = (float)(Position.Y + Math.Cos(degree) * distance);
-						child.Init(pos, angle, depth);
+						child.Init(pos, angle, depth, view);
 						angle += step;
 					}
 				}
@@ -166,7 +201,8 @@ namespace WpfTreeViewDemo
 					dot_pen.DashStyle = System.Windows.Media.DashStyles.Dot;
 					dc.DrawLine(dot_pen, pos, new Point(Parent.Position.X, Parent.Position.Y));
 				}
-				dc.DrawEllipse(Brushes.DarkBlue, pen, pos, radius, radius);
+				var fillBrush = (ownerView != null) ? ownerView.NodeFillBrush : Brushes.DarkBlue;
+				dc.DrawEllipse(fillBrush, pen, pos, radius, radius);
 				dc.DrawLine(pen, pos, new Point(Position.X + Math.Sin(degree) * radius, Position.Y + Math.Cos(degree) * radius));
 				foreach (NodeItem child in this.Items) {
 					child.Draw(dc, w, h, delta);
