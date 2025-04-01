@@ -63,19 +63,41 @@ namespace WpfTreeViewDemo
 		private readonly DispatcherTimer? dispatcherTimer;
 		private DateTime gameTime;
 
+		public enum NodeDirection { Left, Top, Right, Bottom, Center }
+		private NodeDirection rootDirection;
+
+		[Category("RootDirection"), Description("Root node position")]
+		public NodeDirection RootDirection
+		{
+			get { return rootDirection; }
+			set { rootDirection = value; }
+		}
+
 		private SolidColorBrush? nodeFillBrush;
 
 		[Category("NodeFillBrush"), Description("Brush to paint on nodes")]
 		public SolidColorBrush NodeFillBrush
 		{
-			get
-			{
-				return nodeFillBrush ??= new SolidColorBrush(Colors.DarkBlue);
-			}
-			set
-			{
-				nodeFillBrush = value;
-			}
+			get => nodeFillBrush ??= new SolidColorBrush(Colors.DarkBlue);
+			set => nodeFillBrush = value;
+		}
+
+		private SolidColorBrush? nodeBorderBrush;
+
+		[Category("NodeBorderBrush"), Description("Node border brush")]
+		public SolidColorBrush NodeBorderBrush
+		{
+			get => nodeBorderBrush ??= new SolidColorBrush(Colors.White);
+			set => nodeBorderBrush = value;
+		}
+
+		private SolidColorBrush? nodeLineBrush;
+
+		[Category("NodeLineBrush"), Description("Node stem line brush")]
+		public SolidColorBrush NodeLineBrush
+		{
+			get => nodeLineBrush ??= new SolidColorBrush(Colors.Gray);
+			set => nodeLineBrush = value;
 		}
 
 		private void RenderImpl(DrawingContext dc, float w, float h, float delta)
@@ -192,17 +214,16 @@ namespace WpfTreeViewDemo
 
 			public void Draw(DrawingContext dc, float w, float h, float delta)
 			{
-				var pen = new Pen(Brushes.White, 1);
 				var pos = new Point(Position.X, Position.Y);
 				float radius = 10.0f;
 				double degree = Math.PI * Angle / 180.0;
 				if (Parent != null) {
-					var dot_pen = new Pen(Brushes.Gray, 1);
+					var dot_pen = new Pen(ownerView!.NodeLineBrush, 1);
 					dot_pen.DashStyle = System.Windows.Media.DashStyles.Dot;
 					dc.DrawLine(dot_pen, pos, new Point(Parent.Position.X, Parent.Position.Y));
 				}
-				var fillBrush = (ownerView != null) ? ownerView.NodeFillBrush : Brushes.DarkBlue;
-				dc.DrawEllipse(fillBrush, pen, pos, radius, radius);
+				var pen = new Pen(ownerView!.NodeBorderBrush, 1);
+				dc.DrawEllipse(ownerView!.NodeFillBrush, pen, pos, radius, radius);
 				dc.DrawLine(pen, pos, new Point(Position.X + Math.Sin(degree) * radius, Position.Y + Math.Cos(degree) * radius));
 				foreach (NodeItem child in this.Items) {
 					child.Draw(dc, w, h, delta);

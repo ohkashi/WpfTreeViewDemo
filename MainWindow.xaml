@@ -50,7 +50,7 @@
                 <local:TopologyView x:Name="topology"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     Width="Auto" Height="Auto" Margin="4" Padding="0,0,50,0"
-                    NodeFillBrush="DarkGreen"/>
+                    NodeFillBrush="DarkGreen" NodeBorderBrush="AntiqueWhite"/>
             </Border>
         </Grid>
     </Grid>
