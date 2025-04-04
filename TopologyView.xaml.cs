@@ -5,21 +5,10 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
 using System.Numerics;
-using System.Reflection.Metadata;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Media.Media3D;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Windows.Threading;
 
 
@@ -55,8 +44,8 @@ namespace WpfTreeViewDemo
 		{
 			var count = Items.Count;
 			if (count > 0) {
-				var pos = new Vector2(w - (float)this.Padding.Right, h / 2);
-				Items[0]!.Init(pos, 90.0f, 0, this);
+				var pos = new Vector2(w / 2, h / 2);
+				Items[0]!.Init(pos, this);
 			}
 		}
 
@@ -64,7 +53,7 @@ namespace WpfTreeViewDemo
 		private DateTime gameTime;
 
 		public enum NodeDirection { Left, Top, Right, Bottom, Center }
-		private NodeDirection rootDirection;
+		private NodeDirection rootDirection = NodeDirection.Right;
 
 		[Category("RootDirection"), Description("Root node position")]
 		public NodeDirection RootDirection
@@ -98,6 +87,33 @@ namespace WpfTreeViewDemo
 		{
 			get => nodeLineBrush ??= new SolidColorBrush(Colors.Gray);
 			set => nodeLineBrush = value;
+		}
+
+		private float nodeRadius = 0.02f;
+
+		[Category("NodeRadius"), Description("Node radius")]
+		public float NodeRadius
+		{
+			get => nodeRadius;
+			set => nodeRadius = value;
+		}
+
+		private float nodeDistance = 0.2f;
+
+		[Category("NodeDistance"), Description("Node distance")]
+		public float NodeDistance
+		{
+			get => nodeDistance;
+			set => nodeDistance = value;
+		}
+
+		private float childDegree = 20.0f;
+
+		[Category("ChildDegree"), Description("Child Node degree")]
+		public float ChildDegree
+		{
+			get => childDegree;
+			set => childDegree = value;
 		}
 
 		private void RenderImpl(DrawingContext dc, float w, float h, float delta)
@@ -191,31 +207,29 @@ namespace WpfTreeViewDemo
 
 			private TopologyView? ownerView;
 
-			public void Init(Vector2 pos, float angle, int depth, TopologyView? view = null)
+			private int GetIndex(NodeItem item)
+			{
+				for (int i = 0; i < Items.Count; i++) {
+					if (Items[i] == item) {
+						return i;
+					}
+				}
+				return -1;
+			}
+
+			public void Init(Vector2 pos, TopologyView view)
 			{
 				ownerView = view;
 				Position = pos;
-				Angle = angle;
-				if (Items.Count > 0) {
-					depth++;
-					var count = Items.Count;
-					float distance = 100.0f;
-					float step = 20.0f;
-					angle -= (count - 1) / 2.0f * step;
-					foreach (NodeItem child in Items) {
-						double degree = Math.PI * (angle + 180.0f) / 180.0;
-						pos.X = (float)(Position.X + Math.Sin(degree) * distance);
-						pos.Y = (float)(Position.Y + Math.Cos(degree) * distance);
-						child.Init(pos, angle, depth, view);
-						angle += step;
-					}
+				foreach (NodeItem child in Items) {
+					child.Init(pos, view);
 				}
 			}
 
 			public void Draw(DrawingContext dc, float w, float h, float delta)
 			{
 				var pos = new Point(Position.X, Position.Y);
-				float radius = 10.0f;
+				float radius = Math.Max(w, h) * ownerView!.NodeRadius;
 				double degree = Math.PI * Angle / 180.0;
 				if (Parent != null) {
 					var dot_pen = new Pen(ownerView!.NodeLineBrush, 1);
@@ -232,6 +246,48 @@ namespace WpfTreeViewDemo
 
 			public void Update(float w, float h, float delta)
 			{
+				if (Parent != null) {
+					int idx = Parent.GetIndex(this);
+					Debug.Assert(idx >= 0);
+					var count = Parent.Items.Count;
+					float distance = Math.Max(w, h) * ownerView!.NodeDistance;
+					float step = 0;
+					Angle = Parent.Angle;
+					if (count > 1) {
+						step = ownerView!.ChildDegree;
+						Angle -= ownerView!.ChildDegree * (count - 1) / 2.0f;
+					}
+					Angle += step * idx;
+					double degree = Math.PI * (Angle + 180.0f) / 180.0;
+					Position = new Vector2((float)(Parent.Position.X + Math.Sin(degree) * distance),
+						(float)(Parent.Position.Y + Math.Cos(degree) * distance));
+				} else {
+					switch (ownerView!.RootDirection) {
+						case NodeDirection.Left:
+							Position = new Vector2((float)ownerView!.Padding.Left, h / 2);
+							Angle = 270.0f;
+							break;
+						case NodeDirection.Top:
+							Position = new Vector2(w / 2, (float)ownerView!.Padding.Top);
+							Angle = 180.0f;
+							break;
+						case NodeDirection.Right:
+							Position = new Vector2(w - (float)ownerView!.Padding.Right, h / 2);
+							Angle = 90.0f;
+							break;
+						case NodeDirection.Bottom:
+							Position = new Vector2(w / 2, h - (float)ownerView!.Padding.Bottom);
+							Angle = 0.0f;
+							break;
+						case NodeDirection.Center:
+							Position = new Vector2(w / 2, h / 2);
+							Angle = 90.0f;
+							break;
+					}
+				}
+				foreach (NodeItem child in this.Items) {
+					child.Update(w, h, delta);
+				}
 			}
 		}
 

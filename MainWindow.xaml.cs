@@ -35,6 +35,7 @@ namespace WpfTreeViewDemo
 			var child3 = new NodeItem("Child #3", root);
 			var child3_1 = new NodeItem("Child #3.1", child3);
 			child3_1.Items.Add(new NodeItem("Child #3.1.1", child3_1));
+			child3_1.Items.Add(new NodeItem("Child #3.1.2", child3_1));
 			child3.Items.Add(child3_1);
 			root.Items.Add(child3);
 			treeCtrl.Items.Add(root);
