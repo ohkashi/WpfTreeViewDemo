@@ -49,7 +49,7 @@
                 BorderBrush="Black" Background="Black" CornerRadius="8,8,8,8">
                 <local:TopologyView x:Name="topology"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
-                    Width="Auto" Height="Auto" Margin="4" Padding="32"
+                    Width="Auto" Height="Auto" Margin="4" Padding="16"
                     NodeFillBrush="DarkGreen" NodeBorderBrush="AntiqueWhite"/>
             </Border>
         </Grid>

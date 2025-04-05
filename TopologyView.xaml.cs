@@ -10,6 +10,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
+using static WpfTreeViewDemo.TopologyView;
 
 
 namespace WpfTreeViewDemo
@@ -42,6 +43,7 @@ namespace WpfTreeViewDemo
 
 		public void InitNode(float w, float h)
 		{
+			_nodeItemCollection.ownerView = this;
 			var count = Items.Count;
 			if (count > 0) {
 				var pos = new Vector2(w / 2, h / 2);
@@ -123,8 +125,10 @@ namespace WpfTreeViewDemo
 			var y = h / 2.0f;
 			foreach (NodeItem node in Items) {
 				node.Update(w, h, delta);
-				node.Draw(dc, w, h, delta);
+				node.DrawStem(dc, w, h, delta);
 			}
+			foreach (NodeItem node in Items)
+				node.Draw(dc, w, h, delta);
 
 #if DEBUG
 			string testString = $"delta: {delta}";
@@ -226,19 +230,28 @@ namespace WpfTreeViewDemo
 				}
 			}
 
+			public void DrawStem(DrawingContext dc, float w, float h, float delta)
+			{
+				if (Parent != null) {
+					var dot_pen = new Pen(ownerView!.NodeLineBrush, 1);
+					dot_pen.DashStyle = System.Windows.Media.DashStyles.Dot;
+					dc.DrawLine(dot_pen, new Point(Position.X, Position.Y), new Point(Parent.Position.X, Parent.Position.Y));
+				}
+				foreach (NodeItem child in this.Items) {
+					child.DrawStem(dc, w, h, delta);
+				}
+			}
+
 			public void Draw(DrawingContext dc, float w, float h, float delta)
 			{
 				var pos = new Point(Position.X, Position.Y);
 				float radius = Math.Max(w, h) * ownerView!.NodeRadius;
 				double degree = Math.PI * Angle / 180.0;
-				if (Parent != null) {
-					var dot_pen = new Pen(ownerView!.NodeLineBrush, 1);
-					dot_pen.DashStyle = System.Windows.Media.DashStyles.Dot;
-					dc.DrawLine(dot_pen, pos, new Point(Parent.Position.X, Parent.Position.Y));
-				}
 				var pen = new Pen(ownerView!.NodeBorderBrush, 1);
 				dc.DrawEllipse(ownerView!.NodeFillBrush, pen, pos, radius, radius);
+#if DEBUG
 				dc.DrawLine(pen, pos, new Point(Position.X + Math.Sin(degree) * radius, Position.Y + Math.Cos(degree) * radius));
+#endif
 				foreach (NodeItem child in this.Items) {
 					child.Draw(dc, w, h, delta);
 				}
@@ -262,21 +275,22 @@ namespace WpfTreeViewDemo
 					Position = new Vector2((float)(Parent.Position.X + Math.Sin(degree) * distance),
 						(float)(Parent.Position.Y + Math.Cos(degree) * distance));
 				} else {
+					float radius = Math.Max(w, h) * ownerView!.NodeRadius;
 					switch (ownerView!.RootDirection) {
 						case NodeDirection.Left:
-							Position = new Vector2((float)ownerView!.Padding.Left, h / 2);
+							Position = new Vector2(radius + (float)ownerView!.Padding.Left, h / 2);
 							Angle = 270.0f;
 							break;
 						case NodeDirection.Top:
-							Position = new Vector2(w / 2, (float)ownerView!.Padding.Top);
+							Position = new Vector2(w / 2, radius + (float)ownerView!.Padding.Top);
 							Angle = 180.0f;
 							break;
 						case NodeDirection.Right:
-							Position = new Vector2(w - (float)ownerView!.Padding.Right, h / 2);
+							Position = new Vector2(w - radius - (float)ownerView!.Padding.Right, h / 2);
 							Angle = 90.0f;
 							break;
 						case NodeDirection.Bottom:
-							Position = new Vector2(w / 2, h - (float)ownerView!.Padding.Bottom);
+							Position = new Vector2(w / 2, h - radius - (float)ownerView!.Padding.Bottom);
 							Angle = 0.0f;
 							break;
 						case NodeDirection.Center:
@@ -293,6 +307,8 @@ namespace WpfTreeViewDemo
 
 		public class NodeItemCollection : CollectionBase
 		{
+			public TopologyView? ownerView;
+
 			public NodeItem? this[int index] => (NodeItem?)List[index];
 
 			public bool Contains(NodeItem item)
