@@ -91,7 +91,7 @@ namespace WpfTreeViewDemo
 			set => nodeLineBrush = value;
 		}
 
-		private float nodeRadius = 0.02f;
+		private float nodeRadius = 0.03f;
 
 		[Category("NodeRadius"), Description("Node radius")]
 		public float NodeRadius
@@ -100,7 +100,7 @@ namespace WpfTreeViewDemo
 			set => nodeRadius = value;
 		}
 
-		private float nodeDistance = 0.2f;
+		private float nodeDistance = 0.3f;
 
 		[Category("NodeDistance"), Description("Node distance")]
 		public float NodeDistance
@@ -245,7 +245,7 @@ namespace WpfTreeViewDemo
 			public void Draw(DrawingContext dc, float w, float h, float delta)
 			{
 				var pos = new Point(Position.X, Position.Y);
-				float radius = Math.Max(w, h) * ownerView!.NodeRadius;
+				float radius = Math.Min(w, h) * ownerView!.NodeRadius;
 				double degree = Math.PI * Angle / 180.0;
 				var pen = new Pen(ownerView!.NodeBorderBrush, 1);
 				dc.DrawEllipse(ownerView!.NodeFillBrush, pen, pos, radius, radius);
@@ -263,7 +263,7 @@ namespace WpfTreeViewDemo
 					int idx = Parent.GetIndex(this);
 					Debug.Assert(idx >= 0);
 					var count = Parent.Items.Count;
-					float distance = Math.Max(w, h) * ownerView!.NodeDistance;
+					float distance = Math.Min(w, h) * ownerView!.NodeDistance;
 					float step = 0;
 					Angle = Parent.Angle;
 					if (count > 1) {
@@ -275,7 +275,7 @@ namespace WpfTreeViewDemo
 					Position = new Vector2((float)(Parent.Position.X + Math.Sin(degree) * distance),
 						(float)(Parent.Position.Y + Math.Cos(degree) * distance));
 				} else {
-					float radius = Math.Max(w, h) * ownerView!.NodeRadius;
+					float radius = Math.Min(w, h) * ownerView!.NodeRadius;
 					switch (ownerView!.RootDirection) {
 						case NodeDirection.Left:
 							Position = new Vector2(radius + (float)ownerView!.Padding.Left, h / 2);
