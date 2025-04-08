@@ -54,8 +54,8 @@ namespace WpfTreeViewDemo
 		private readonly DispatcherTimer? dispatcherTimer;
 		private DateTime gameTime;
 
-		public enum NodeDirection { Left, Top, Right, Bottom, Center }
-		private NodeDirection rootDirection = NodeDirection.Right;
+		public enum NodeDirection { Left, Right, Top, Bottom, Center }
+		private NodeDirection rootDirection = NodeDirection.Left;
 
 		[Category("RootDirection"), Description("Root node position")]
 		public NodeDirection RootDirection
@@ -281,13 +281,13 @@ namespace WpfTreeViewDemo
 							Position = new Vector2(radius + (float)ownerView!.Padding.Left, h / 2);
 							Angle = 270.0f;
 							break;
-						case NodeDirection.Top:
-							Position = new Vector2(w / 2, radius + (float)ownerView!.Padding.Top);
-							Angle = 180.0f;
-							break;
 						case NodeDirection.Right:
 							Position = new Vector2(w - radius - (float)ownerView!.Padding.Right, h / 2);
 							Angle = 90.0f;
+							break;
+						case NodeDirection.Top:
+							Position = new Vector2(w / 2, radius + (float)ownerView!.Padding.Top);
+							Angle = 180.0f;
 							break;
 						case NodeDirection.Bottom:
 							Position = new Vector2(w / 2, h - radius - (float)ownerView!.Padding.Bottom);

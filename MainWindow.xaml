@@ -15,6 +15,10 @@
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto" MinHeight="40"/>
+        </Grid.RowDefinitions>
         <Grid Grid.Column="0">
             <materialDesign:Card>
                 <TreeView Name="treeCtrl" Width="200">
@@ -44,7 +48,19 @@
             </TreeView>
             </materialDesign:Card>
         </Grid>
-        <Grid Grid.Column="1">
+        <Grid Grid.Column="0" Grid.Row="1">
+            <StackPanel Orientation="Horizontal" Width="Auto">
+                <TextBlock Text="Root Direction:" Padding="4,0,4,0" VerticalAlignment="Center" />
+                <ComboBox Name="ComboRootDirection" materialDesign:HintAssist.Hint="Root Direction"
+                    SelectionChanged="RootDirectionChanged">
+                    <ComboBoxItem Content="Left" />
+                    <ComboBoxItem Content="Right" />
+                    <ComboBoxItem Content="Top" />
+                    <ComboBoxItem Content="Bottom" />
+                </ComboBox>
+            </StackPanel>
+        </Grid>
+        <Grid Grid.Column="1" Grid.Row="0" Grid.RowSpan="2">
             <Border Name="topologyBorder" Margin="4" BorderThickness="1,1,1,1"
                 BorderBrush="Black" Background="Black" CornerRadius="8,8,8,8">
                 <local:TopologyView x:Name="topology"

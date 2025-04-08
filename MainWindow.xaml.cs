@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -45,6 +46,7 @@ namespace WpfTreeViewDemo
 			RemoveItemCmd = new RelayCommand(RemoveItemCmdExe, CanRemoveItemCmdExe);
 
 			topology.DataContext = this;
+			ComboRootDirection.SelectedIndex = (int)topology.RootDirection;
 		}
 
 		protected override void OnSourceInitialized(EventArgs e)
@@ -72,6 +74,11 @@ namespace WpfTreeViewDemo
 		{
 			topology.Width = topologyBorder.ActualWidth;
 			topology.Height = topologyBorder.ActualHeight;
+		}
+
+		private void RootDirectionChanged(object sender, SelectionChangedEventArgs e)
+		{
+			topology.RootDirection = (TopologyView.NodeDirection)ComboRootDirection.SelectedIndex;
 		}
 
 		public RelayCommand AddItemCmd { get; set; }
